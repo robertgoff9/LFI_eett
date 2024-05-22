@@ -1,6 +1,8 @@
 """
 Harrison Prosper, Robert Goff
-Last Updated: June 6, 2023
+Last Updated: May 22, 2024
+
+python3 train_stat.py [Data file] [Identifier for resulting stat]
 
 This program is designed to take in data generated in Sherpa or other particle
 simulation software based on Dim 6
@@ -40,6 +42,7 @@ from sklearn.metrics import roc_curve, auc
 # to reload modules
 import importlib
 #-------------------------------------------------------------
+# update fonts in plots
 FONTSIZE = 14
 font = {'family' : 'serif',
          'weight' : 'normal',
@@ -55,11 +58,16 @@ mp.rc('text', usetex=True)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Available device: {str(device):4s}')
 
+# set parameters to be used in training 
 W        = 40       # scale factor in loss function
-PT_SCALE = 200      # GeV
-Wilson_Scale = 1
+PT_SCALE = 200      # (GeV) scales the PT values so that they are normalized
+Wilson_Scale = 1    #
 Ang_Scale = 1
 N        = 1000000
+
+# sets the file identifeier from the command line arguments 
+ID = sys.argv[2]
+
 #-----------------------------------------------------------
 #Plotting functions
 
@@ -77,8 +85,9 @@ YSTEP=  0.5
 YNAME= 'ctl1'
 YLABEL = r'$ct_{l_1}$'
 
+# plots the distribution of wilson coeffectients in param space
 def plot_data(df, 
-              filename='ttbargamma_variables.png',
+              filename = ID + '_param_space.png',
               xmin=XMIN, xmax=XMAX, xstep=XSTEP, 
               xname=XNAME, xlabel=XLABEL,
               ymin=YMIN, ymax=YMAX, ystep=YSTEP,
@@ -115,6 +124,7 @@ def plot_data(df,
     plt.savefig(filename)
     plt.show()
 
+# plots the losses of the model training 
 def plot_average_losses(losses):
     
     xx, yy_t, yy_v = losses
@@ -139,10 +149,12 @@ def plot_average_losses(losses):
 
     plt.show()
 
-def plot_distribution(t, y, 
-                      nbins=40, 
-                      xmin=-2, 
-                      xmax= 2 , 
+# plots a histogram of SMEFT and SM values for the statistic
+def plot_distribution(t, y,
+                      filename = ID + '_stat_distribution.png',
+                      nbins=100, 
+                      xmin=-1, 
+                      xmax= 1 , 
                       ftsize=14, 
                       fgsize=(6, 4)):
 
@@ -155,8 +167,8 @@ def plot_distribution(t, y,
     # set size of figure
     plt.figure(figsize=fgsize)
     
-    plt.xlim(xmin, xmax)
-    plt.ylim(0, 1.5)
+    #plt.xlim(xmin, xmax)
+    #plt.ylim(0, 1.5)
     
     plt.hist(sm, 
              bins=nbins, 
@@ -176,10 +188,10 @@ def plot_distribution(t, y,
              label='SMEFT')
     plt.legend(fontsize='small')
 
-    plt.savefig("ttbargamma.png")
+    plt.savefig(filename)
     plt.show()
 
-def plot_ROC(y, p):
+def plot_ROC(y, p, filename = ID + '_ROC.png'):
     
     bad, good, _ = roc_curve(y, p)
     
@@ -197,15 +209,15 @@ def plot_ROC(y, p):
 
     plt.legend(loc="lower right", fontsize=14)
     
-    plt.savefig("ttbargamma_ROCN10.png")
+    plt.savefig(filename)
     plt.show()
+
 #---------------------------------------------------------------------
 # Functions for the neural network
 # Note: there are several average loss functions available 
 # in PyTorch, such as nn.CrossEntropyLoss(), but it's useful 
 # to know how to create your own.
 
-W        = 40       # scale factor in loss function
 def average_exponential_loss(f, t, w=W):
     # f and t must be of the same shape
     losses = torch.exp(-w*t*f/2)
@@ -346,11 +358,9 @@ def compute(f, x, w=W):
     x = torch.Tensor(x)
     y = w * f(x).view(-1,).detach().numpy()
     return y
+
 #---------------------------------------------------------------------------
 
-# function that converts the pandas dataframe to the proper tensor for useage
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def dataframe2tensor(df, target, source):
     # change from pandas dataframe to PyTorch tensors
     # and load data to device.
@@ -422,19 +432,15 @@ def main():
     #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'Available device: {str(device):4s}')
 
-    W        = 40       # scale factor in loss function
-    PT_SCALE = 200      # GeV
-    Wilson_Scale = 1
-    Ang_Scale = 1
-    N        = 1000000
-    df = pd.read_csv('../Data_Sets/test3.csv')
+    # load in data to dataframe using command line argument
+    df = pd.read_csv(sys.argv[1])
     df['pT(b1)'] /= PT_SCALE
     df['pT(l1)'] /= PT_SCALE
-    df['ctz']    /= Wilson_Scale
-    df['ctl1']   /= Wilson_Scale
-    df['dEta(l1 l2)'] /= Ang_Scale
-    df['dPhi(l1 l2)'] /= Ang_Scale
-    df['dR(l1 l2)'] /= Ang_Scale
+    #df['ctz']    /= Wilson_Scale
+    #df['ctl1']   /= Wilson_Scale
+    #df['dEta(l1 l2)'] /= Ang_Scale
+    #df['dPhi(l1 l2)'] /= Ang_Scale
+    #df['dR(l1 l2)'] /= Ang_Scale
     print(len(df))
     print(df[:10])
 
@@ -463,34 +469,30 @@ def main():
     valid_data = valid_data.reset_index(drop=True)
     test_data  = test
 
-    # save data
-    train_data.to_csv('ttbargamma_train.csv', index=False)
-    valid_data.to_csv('ttbargamma_valid.csv', index=False)
-    test_data.to_csv('ttbargamma_test.csv',   index=False)
+    # save data sets for future reference 
+    train_data.to_csv(ID + '_train.csv', index=False)
+    valid_data.to_csv(ID + '_valid.csv', index=False)
+    test_data.to_csv(ID + '_test.csv',   index=False)
 
     print('train set size:        %6d' % train_data.shape[0])
     print('validation set size:   %6d' % valid_data.shape[0])
     print('test set size:         %6d' % test_data.shape[0])
 
-    print(len(train_data))
-    print(len(valid_data))
-    print(len(test_data))
-
+    # transforms the objects to pytorch tensors for training
     train_x, train_t = dataframe2tensor(train_data, target, features)
     valid_x, valid_t = dataframe2tensor(valid_data, target, features)
     test_x,  test_t  = dataframe2tensor(test_data,  target, features)
 
-    print(train_x[:5], train_t[:5])
-
-
+    #print(train_x[:5], train_t[:5])
 
     k = 2000
     plot_data(train[:k])
+    #print(len(features))
 
-
-
-    print(len(features))
-    model = nn.Sequential(nn.Linear( 7, 20), nn.SiLU(), # layer 0
+    # defines the model mannually, alternitively you could use the model class 
+    # defined above. If you use the mannual method you must make sure this is 
+    # defined the same in subseqent programs
+    model = nn.Sequential(nn.Linear( 7, 20), nn.SiLU(),    # layer 0
                           nn.Linear(20, 20), nn.SiLU(),    # layer 1
                           nn.Linear(20, 20), nn.SiLU(),    # layer 2
                           nn.Linear(20,  1), nn.Tanh())    # layer 3
@@ -506,6 +508,7 @@ def main():
     print(model)
     print('number of parameters: %d' % number_of_parameters(model))
 
+    # defines aspects of the model to be trained
     average_loss  = average_exponential_loss
     step          = 1
     losses        = ([], [], [])
@@ -527,15 +530,11 @@ def main():
                                      losses, step)
     
     # save best model parameters
-    torch.save(best_model.state_dict(), 'teststatistic.db')
+    torch.save(best_model.state_dict(), ID + '.db')
     plot_average_losses(losses)
 
-
     test_y = compute(best_model, test_x)
-
-
     plot_distribution(test_t, test_y)
-
     plot_ROC(test_t, test_y)
 
 main()
