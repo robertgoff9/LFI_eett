@@ -67,9 +67,10 @@ N        = 1000000
 
 # sets the file identifeier from the command line arguments 
 ID = sys.argv[2]
+print(torch.__version__)
 
 #-----------------------------------------------------------
-#Plotting functions
+# Plotting functions
 
 # Plot the parameter space of the data set. In this case should be 
 # uniform across (ctz, ctl1)

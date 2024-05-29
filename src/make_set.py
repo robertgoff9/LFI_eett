@@ -1,8 +1,8 @@
 #! /bin/env/python3
 """
-Robert Goff  Last updated: Feb 20 2024
+Robert Goff  Last updated: May 22, 2024
 
-python3 MakeSet.py [SMEFT data directory] [SM data file] [identifier for new data set]
+python3 make_set.py [SMEFT data directory] [SM data file] [identifier for new data set]
 
 This program is  made to read in csv files and create a data set of SMEFT events.
 It takes as arguments the location of the SMEFT data, the SM data file, and the identifier
@@ -28,7 +28,7 @@ from time import time, sleep
 #--------------------------------------------------------------
 def main():
 
-    	# Name of final data set. DO NOT include file extension in this string
+	# Name of final data set. DO NOT include file extension in this string
 	SMEFT_dir = sys.argv[1]
 	SM_file   = sys.argv[2]
 	data_name = sys.argv[3]
